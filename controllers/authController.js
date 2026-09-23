@@ -1,5 +1,6 @@
 const User = require('../models/userSchema')
-const bcryt = require('bcrypt')
+const bcrypt = require('bcrypt')
+const jwt = require('jsonwebtoken')
 
 const registerUser = async (req, res) => {
     try {
@@ -11,7 +12,7 @@ const registerUser = async (req, res) => {
             return res.status(400).json({ message: 'El usuario ya existe en la base de datos' });
         }
 
-        const hashedPassword = await bcryt.hash(password, 10);
+        const hashedPassword = await bcrypt.hash(password, 10);
 
         user = new User({
             nombre: nombre,
@@ -31,4 +32,35 @@ const registerUser = async (req, res) => {
     }
 }
 
-module.exports = { registerUser }
+const loginUser = async (req, res) => {
+    try {
+        const { email, password } = req.body
+        const user = await User.findOne({ email })
+
+        if (!user) {
+            return res.status(404).json({ message: 'El usuario no existe en la base de datos' })
+        }
+
+        const passwordMatch = await bcrypt.compare(password, user.password)
+
+        if (!passwordMatch) {
+            return res.status(401).json({ message: 'Contraseña incorrecta' })
+        }
+
+        const token = jwt.sign(
+            {id: user._id},
+            process.env.JWT_SECRET_KEY,
+            {expiresIn: '1h'}
+        )
+
+        return res.status(200).json({
+            token
+        })
+    } catch (error) {
+        return res.status(500).json({ 
+            msg: `Error al iniciar sesión: ${error.message}`
+        });
+    }
+}
+
+module.exports = { registerUser, loginUser }
