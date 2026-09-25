@@ -29,7 +29,7 @@ const remesaSchema = new mongoose.Schema({
     },
     estado: {
         type: String,
-        enum: ['enBodega', 'cargada', 'enTransito', 'entregado'],
+        enum: ['enBodega', 'cargada', 'enTransito', 'entregado', 'asignada'],
         default: 'enBodega'
     }
 })

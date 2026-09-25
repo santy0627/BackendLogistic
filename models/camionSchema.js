@@ -9,6 +9,15 @@ const camionSchema = new mongoose.Schema({
     capacidadCarga: {
         type: Number,
         required: true 
+    },
+    disponible: {
+        type: Boolean,
+        default: true
+    },
+    ubicacionActual: {
+        type: String,
+        enum: ['bodega', 'enRuta'],
+        default: 'bodega'
     }
 })
 
