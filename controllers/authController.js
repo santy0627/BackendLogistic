@@ -4,15 +4,17 @@ const jwt = require('jsonwebtoken')
 
 const registerUser = async (req, res) => {
     try {
-        const { nombre, email, password, role } = req.body;
+        const { nombre, email, password, role } = req.body
 
-        let user = await User.findOne({ email });
+        let user = await User.findOne({ email })
 
         if (user) {
-            return res.status(400).json({ message: 'El usuario ya existe en la base de datos' });
+            return res.status(400).json({ 
+                msg: 'El usuario ya existe en la base de datos' 
+            })
         }
 
-        const hashedPassword = await bcrypt.hash(password, 10);
+        const hashedPassword = await bcrypt.hash(password, 10)
 
         user = new User({
             nombre: nombre,
@@ -23,7 +25,9 @@ const registerUser = async (req, res) => {
 
         await user.save();
 
-        res.status(201).json({ message: 'Usuario registrado exitosamente' });
+        res.status(201).json({ 
+            msg: 'Usuario registrado exitosamente' 
+        })
 
     } catch (error) {
         return res.status(500).json({ 
@@ -38,13 +42,17 @@ const loginUser = async (req, res) => {
         const user = await User.findOne({ email })
 
         if (!user) {
-            return res.status(404).json({ message: 'El usuario no existe en la base de datos' })
+            return res.status(404).json({ 
+                msg: 'El usuario no existe en la base de datos' 
+            })
         }
 
         const passwordMatch = await bcrypt.compare(password, user.password)
 
         if (!passwordMatch) {
-            return res.status(401).json({ message: 'Contraseña incorrecta' })
+            return res.status(401).json({ 
+                msg: 'Contraseña incorrecta' 
+            })
         }
 
         const token = jwt.sign(
