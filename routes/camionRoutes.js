@@ -4,7 +4,8 @@ const { crearCamion } = require('../controllers/camionController')
 const { camionValidator } = require('../validators/camionValidator')
 const authMiddleware = require('../middlewares/authMiddleware')
 const authRole = require('../middlewares/roleAuthMiddleware')
+const validateMiddleware = require('../middlewares/validateMiddleware')
 
-router.post('/camion', authMiddleware, authRole('admin'), camionValidator, crearCamion)
+router.post('/camion', authMiddleware, authRole('admin'), camionValidator, validateMiddleware, crearCamion)
 
 module.exports = router

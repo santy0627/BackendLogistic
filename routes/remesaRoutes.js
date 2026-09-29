@@ -6,9 +6,9 @@ const validateMiddleware = require('../middlewares/validateMiddleware')
 const authMiddleware = require('../middlewares/authMiddleware')
 const authRole = require('../middlewares/roleAuthMiddleware')
 
-router.post('/remesa', authMiddleware, authRole('admin'), validateMiddleware, remesaValidator, crearRemesa)
+router.post('/remesa', authMiddleware, authRole('admin'), remesaValidator, validateMiddleware, crearRemesa)
 router.get('/remesas', authMiddleware, obtenerRemesas)
 router.get('/remesas/:estado', authMiddleware, obtenerRemesasPorEstado)
-router.put('/remesa/:id', authMiddleware, remesaValidator, actualizarRemesa)
+router.put('/remesa/:id', authMiddleware, remesaValidator, validateMiddleware, actualizarRemesa)
 
 module.exports = router

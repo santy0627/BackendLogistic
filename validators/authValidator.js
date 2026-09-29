@@ -15,4 +15,12 @@ const registerValidator = [
         .isIn(['admin', 'auxiliar', 'conductor']).withMessage('El rol debe ser admin, auxiliar o conductor')
 ]
 
-module.exports = {registerValidator}
+const loginValidator = [
+    body('email')
+        .notEmpty().withMessage('El email es obligatorio')
+        .isEmail().withMessage('Debes enviar un email válido'),
+    body('password')
+        .notEmpty().withMessage('El password es obligatorio')
+]
+
+module.exports = {registerValidator, loginValidator}
