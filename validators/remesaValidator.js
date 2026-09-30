@@ -15,7 +15,16 @@ const remesaValidator = [
     body('ciudadEntrega')
         .notEmpty().withMessage('La ciudad de entrega es obligatoria'),
     body('tipoMercancia')
-        .notEmpty().withMessage('El tipo de mercancía es obligatorio')
+        .notEmpty().withMessage('El tipo de mercancía es obligatorio'),
+    body('estado')
+        .optional()
+        .isIn(['enBodega', 'cargada', 'enTransito', 'entregado', 'asignada']).withMessage('El estado debe ser uno de los valores válidos')
 ]
 
-module.exports = {remesaValidator}
+const remesaActualizarValidator = [
+    body('estado')
+        .notEmpty().withMessage('El estado es obligatorio')
+        .isIn(['enBodega', 'cargada', 'enTransito', 'entregado', 'asignada']).withMessage('El estado debe ser uno de los valores válidos')
+]
+
+module.exports = {remesaValidator, remesaActualizarValidator}
