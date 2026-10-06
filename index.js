@@ -4,11 +4,13 @@ const dotenv = require('dotenv')
 const auth = require('./routes/authRoutes')
 const remesa = require('./routes/remesaRoutes')
 const camion = require('./routes/camionRoutes')
+const cors = require('cors')
 
 dotenv.config()
 const dbConnection = require('./config/db')
 
 dbConnection()
+app.use(cors())
 
 app.use(express.json())
 
