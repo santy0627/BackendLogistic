@@ -30,5 +30,27 @@ const crearCamion = async (req, res) => {
     }
 }
 
+const actualizarCamion = async (req, res) => {
+    try {
 
-module.exports = { crearCamion }
+        const { disponible } = req.body
+
+        const camion = await Camion.findByIdAndUpdate(
+            req.params.id,
+            { disponible },
+            { new: true }
+        )
+
+        return res.status(200).json({
+            msg: 'Disponibilidad del camión actualizada exitosamente',
+            camion
+        })
+    } catch (error) {
+        return res.status(500).json({
+            msg: `Error al actualizar el camión: ${error.message}`
+        })
+    }
+}
+
+
+module.exports = { crearCamion, actualizarCamion }
