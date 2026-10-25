@@ -88,7 +88,22 @@ const actualizarRemesa = async (req, res) => {
             msg: `Error al actualizar la remesa: ${error.message}`
         })
     }
+
+}
+
+const eliminarRemesa = async (req, res) => {
+    try {
+
+        const remesa = await Remesa.findByIdAndDelete(req.params.id)
+
+        res.status(200).json({ msg: 'Remesa eliminada' })
+
+    } catch (error) {
+        return res.status(500).json({
+            msg:` Error eliminando tarea: ${error.message}`
+        })
+    }
 }
 
 
-module.exports = { crearRemesa, obtenerRemesas, obtenerRemesasPorEstado, actualizarRemesa }
+module.exports = { crearRemesa, obtenerRemesas, obtenerRemesasPorEstado, actualizarRemesa, eliminarRemesa }

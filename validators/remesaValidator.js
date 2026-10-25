@@ -18,6 +18,7 @@ const remesaValidator = [
         .notEmpty().withMessage('El tipo de mercancía es obligatorio'),
     body('estado')
         .optional()
+        .default('enBodega')
         .isIn(['enBodega', 'cargada', 'enTransito', 'entregado', 'asignada']).withMessage('El estado debe ser uno de los valores válidos')
 ]
 

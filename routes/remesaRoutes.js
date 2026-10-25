@@ -1,6 +1,6 @@
 const express = require('express')
 const router = express.Router()
-const { crearRemesa, obtenerRemesas, obtenerRemesasPorEstado, actualizarRemesa } = require('../controllers/remesaController')
+const { crearRemesa, obtenerRemesas, obtenerRemesasPorEstado, actualizarRemesa, eliminarRemesa } = require('../controllers/remesaController')
 const { remesaValidator, remesaActualizarValidator } = require('../validators/remesaValidator')
 const validateMiddleware = require('../middlewares/validateMiddleware')
 const authMiddleware = require('../middlewares/authMiddleware')
@@ -10,5 +10,6 @@ router.post('/remesas', authMiddleware, authRole('admin'), remesaValidator, vali
 router.get('/remesas', authMiddleware, obtenerRemesas)
 router.get('/remesas/:estado', authMiddleware, obtenerRemesasPorEstado)
 router.put('/remesas/:id', authMiddleware, remesaActualizarValidator, validateMiddleware, actualizarRemesa)
+router.delete('/remesas/:id', authMiddleware, authRole('admin'), validateMiddleware, eliminarRemesa)
 
 module.exports = router
