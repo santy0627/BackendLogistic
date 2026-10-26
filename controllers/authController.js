@@ -73,4 +73,25 @@ const loginUser = async (req, res) => {
     }
 }
 
-module.exports = { registerUser, loginUser }
+const getUsersByRole = async (req, res) => {
+    try {
+        const { role } = req.params
+
+        const rolesValidos = User.schema.path('role').enumValues
+
+        if (!rolesValidos.includes(role)) {
+            return res.status(400).json({
+                msg: 'El rol ingresado es inválido'
+            })
+        }
+
+        const users = await User.find({ role })
+        return res.status(200).json(users)
+    } catch {
+        return res.status(500).json({
+            msg: `Error al obtener usuarios: ${error.message}`
+        })
+    }
+}
+
+module.exports = { registerUser, loginUser, getUsersByRole }

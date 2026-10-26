@@ -2,10 +2,10 @@ const Camion = require('../models/camionSchema')
 
 const obtenerCamiones = async (req, res) => {
     try {
-        const camiones = await Camion.find()
+        const camiones = await Camion.find().populate('conductorAsignado', 'nombre')
 
         return res.status(200).json( camiones )
-    } catch {
+    } catch (error){
         return res.status(500).json({
             msg: `Error al obtener los camiones: ${error.message}`
         })
@@ -14,7 +14,7 @@ const obtenerCamiones = async (req, res) => {
 
 const crearCamion = async (req, res) => {
     try {
-        const { placa, capacidadCarga } = req.body
+        const { placa, capacidadCarga, conductorAsignado, disponible, ubicacionActual } = req.body
 
         let camion = await Camion.findOne({ placa })
 
@@ -26,7 +26,10 @@ const crearCamion = async (req, res) => {
 
         camion = new Camion({
             placa: placa,
-            capacidadCarga: capacidadCarga
+            capacidadCarga: capacidadCarga,
+            conductorAsignado: conductorAsignado || null,
+            disponible: disponible ?? true,
+            ubicacionActual: ubicacionActual ?? 'bodega'
         })
 
         await camion.save()

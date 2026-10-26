@@ -13,7 +13,11 @@ const camionValidator = [
     body('ubicacionActual')
         .optional()
         .default('bodega')
-        .isIn(['bodega', 'enRuta'])
+        .isIn(['bodega', 'enRuta']),
+    body('remesasAsignadas')
+        .optional(),
+    body('conductorAsignado')
+        .optional()
 ]
 
 module.exports = { camionValidator }
