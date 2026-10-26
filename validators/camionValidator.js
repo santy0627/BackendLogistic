@@ -6,7 +6,14 @@ const camionValidator = [
         .isLength({ min: 6, max: 6 }).withMessage('La placa debe tener exactamente 6 caracteres, 3 letras y 3 números'),
     body('capacidadCarga')
         .notEmpty().withMessage('La capacidad de carga es obligatoria')
-        .isNumeric().withMessage('La capacidad de carga debe ser un número')
+        .isNumeric().withMessage('La capacidad de carga debe ser un número'),
+    body('disponible')
+        .optional()
+        .default(true),
+    body('ubicacionActual')
+        .optional()
+        .default('bodega')
+        .isIn(['bodega', 'enRuta'])
 ]
 
 module.exports = { camionValidator }

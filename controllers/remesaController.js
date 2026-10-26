@@ -94,13 +94,13 @@ const actualizarRemesa = async (req, res) => {
 const eliminarRemesa = async (req, res) => {
     try {
 
-        const remesa = await Remesa.findByIdAndDelete(req.params.id)
+        await Remesa.findByIdAndDelete(req.params.id)
 
         res.status(200).json({ msg: 'Remesa eliminada' })
 
     } catch (error) {
         return res.status(500).json({
-            msg:` Error eliminando tarea: ${error.message}`
+            msg:` Error eliminando remesa: ${error.message}`
         })
     }
 }

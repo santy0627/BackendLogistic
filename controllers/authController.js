@@ -61,8 +61,10 @@ const loginUser = async (req, res) => {
             {expiresIn: '1h'}
         )
 
+        const roleUser = user.role
+
         return res.status(200).json({
-            token
+            token, roleUser
         })
     } catch (error) {
         return res.status(500).json({ 

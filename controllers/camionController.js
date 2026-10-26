@@ -1,5 +1,17 @@
 const Camion = require('../models/camionSchema')
 
+const obtenerCamiones = async (req, res) => {
+    try {
+        const camiones = await Camion.find()
+
+        return res.status(200).json( camiones )
+    } catch {
+        return res.status(500).json({
+            msg: `Error al obtener los camiones: ${error.message}`
+        })
+    }
+}
+
 const crearCamion = async (req, res) => {
     try {
         const { placa, capacidadCarga } = req.body
@@ -52,5 +64,18 @@ const actualizarCamion = async (req, res) => {
     }
 }
 
+const eliminarCamion = async (req, res) => {
+    try {
 
-module.exports = { crearCamion, actualizarCamion }
+        await Camion.findByIdAndDelete(req.params.id)
+
+        res.status(200).json({ msg: 'Camion eliminada' })
+
+    } catch (error) {
+        return res.status(500).json({
+            msg:` Error eliminando camion: ${error.message}`
+        })
+    }
+}
+
+module.exports = { crearCamion, actualizarCamion, obtenerCamiones, eliminarCamion }
