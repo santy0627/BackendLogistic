@@ -87,7 +87,7 @@ const getUsersByRole = async (req, res) => {
 
         const users = await User.find({ role })
         return res.status(200).json(users)
-    } catch {
+    } catch (error){
         return res.status(500).json({
             msg: `Error al obtener usuarios: ${error.message}`
         })

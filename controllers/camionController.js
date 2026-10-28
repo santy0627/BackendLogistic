@@ -72,9 +72,26 @@ const actualizarCamion = async (req, res) => {
 const eliminarCamion = async (req, res) => {
     try {
 
-        await Camion.findByIdAndDelete(req.params.id)
+        const camion = await Camion.findById(req.params.id)
 
-        res.status(200).json({ msg: 'Camion eliminada' })
+        if(!camion) return res.status(500).json({
+            msg: 'El camión no existe'
+        })
+
+        if(camion.ubicacionActual === 'enRuta'){
+            return res.status(400).json({
+                msg: 'No puedes eliminar un camión en ruta'
+            })
+        }
+
+        await Remesa.updateMany(
+            { _id: { $in: camion.remesasAsignadas} },
+            { estado: 'enBodega' }
+        )
+
+        await Camion.findByIdAndDelete(camion._id)
+
+        return res.status(200).json({ msg: 'Camion eliminado y remesas actualizadas' })
 
     } catch (error) {
         return res.status(500).json({
