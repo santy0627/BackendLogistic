@@ -1,8 +1,9 @@
 const Camion = require('../models/camionSchema')
+const Remesa = require('../models/remesaSchema')
 
 const obtenerCamiones = async (req, res) => {
     try {
-        const camiones = await Camion.find().populate('conductorAsignado', 'nombre')
+        const camiones = await Camion.find().populate('conductorAsignado', 'nombre').populate('remesasAsignadas')
 
         return res.status(200).json( camiones )
     } catch (error){
@@ -14,7 +15,7 @@ const obtenerCamiones = async (req, res) => {
 
 const crearCamion = async (req, res) => {
     try {
-        const { placa, capacidadCarga, conductorAsignado, disponible, ubicacionActual } = req.body
+        const { placa, capacidadCarga, conductorAsignado, disponible, ubicacionActual, ciudadOperacion } = req.body
 
         let camion = await Camion.findOne({ placa })
 
@@ -29,7 +30,8 @@ const crearCamion = async (req, res) => {
             capacidadCarga: capacidadCarga,
             conductorAsignado: conductorAsignado || null,
             disponible: disponible ?? true,
-            ubicacionActual: ubicacionActual ?? 'bodega'
+            ubicacionActual: ubicacionActual ?? 'bodega',
+            ciudadOperacion: ciudadOperacion
         })
 
         await camion.save()
@@ -81,4 +83,61 @@ const eliminarCamion = async (req, res) => {
     }
 }
 
-module.exports = { crearCamion, actualizarCamion, obtenerCamiones, eliminarCamion }
+const asignarRemesas = async (req, res) => {
+    try {
+
+        const { id } = req.params
+
+        const camion = await Camion.findById(id)
+
+        if(!camion) {
+            return res.status(400).json({
+                msg: 'El camion no existe en la base de datos'
+            })
+        }
+
+        const remesasDisponibles = await Remesa.find({
+            ciudadEntrega: camion.ciudadOperacion,
+            estado: 'enBodega'
+        })
+
+        if(remesasDisponibles.length === 0){
+            return res.status(400).json({
+                msg: 'No hay remesas disponibles en esta ciudad'
+            })
+        }
+
+        const remesasACargar = []
+        let pesoAcumulado = 0
+        
+        for (let i = 0; i < remesasDisponibles.length; i++) {
+
+            const remesa = remesasDisponibles[i]
+
+            if(remesa.pesoTotal + pesoAcumulado <= camion.capacidadCarga) {
+                pesoAcumulado = pesoAcumulado + remesa.pesoTotal
+                remesasACargar.push(remesa._id)
+            }
+        }
+
+        camion.remesasAsignadas = [...remesasACargar]
+
+        await camion.save()
+
+        await Remesa.updateMany(
+            { _id: { $in: remesasACargar} },
+            { estado: 'asignada' }
+        )
+
+        return res.status(200).json({
+            msg : 'Remesas asignadas correctamente'
+        })
+
+    } catch (error) {
+        return res.status(500).json({
+            msg: `Error asignando remesas: ${error.message}`
+        })
+    }
+}
+
+module.exports = { crearCamion, actualizarCamion, obtenerCamiones, eliminarCamion, asignarRemesas }

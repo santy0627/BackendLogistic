@@ -17,7 +17,9 @@ const camionValidator = [
     body('remesasAsignadas')
         .optional(),
     body('conductorAsignado')
-        .optional()
+        .optional(),
+    body('ciudadOperacion')
+        .notEmpty().withMessage('La ciudad de operación es obligatoria')
 ]
 
 module.exports = { camionValidator }

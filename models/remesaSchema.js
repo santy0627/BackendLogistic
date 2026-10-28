@@ -1,4 +1,5 @@
 const mongoose = require('mongoose')
+const { ciudades } = require('../constants/ciudades')
 
 const remesaSchema = new mongoose.Schema({
     codigo: {
@@ -20,6 +21,7 @@ const remesaSchema = new mongoose.Schema({
     },
     ciudadEntrega: {
         type: String,
+        enum: ciudades,
         required: true
     },
     tipoMercancia: {

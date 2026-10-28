@@ -1,4 +1,5 @@
 const mongoose = require('mongoose')
+const { ciudades } = require('../constants/ciudades')
 
 const camionSchema = new mongoose.Schema({
     placa: {
@@ -27,6 +28,11 @@ const camionSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
         default: null
+    },
+    ciudadOperacion: {
+        type: String,
+        enum: ciudades,
+        required: true
     }
 })
 
