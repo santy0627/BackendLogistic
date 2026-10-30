@@ -3,95 +3,91 @@ const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken')
 
 const registerUser = async (req, res) => {
-    try {
-        const { nombre, email, password, role } = req.body
+  try {
+    const { nombre, email, password, role } = req.body
 
-        let user = await User.findOne({ email })
+    let user = await User.findOne({ email })
 
-        if (user) {
-            return res.status(400).json({ 
-                msg: 'El usuario ya existe en la base de datos' 
-            })
-        }
-
-        const hashedPassword = await bcrypt.hash(password, 10)
-
-        user = new User({
-            nombre: nombre,
-            email: email,
-            password: hashedPassword,
-            role: role
-        })
-
-        await user.save();
-
-        res.status(201).json({ 
-            msg: 'Usuario registrado exitosamente' 
-        })
-
-    } catch (error) {
-        return res.status(500).json({ 
-            msg: `Error al registrar el usuario: ${error.message}`
-        });
+    if (user) {
+      return res.status(400).json({
+        msg: 'El usuario ya existe en la base de datos'
+      })
     }
+
+    const hashedPassword = await bcrypt.hash(password, 10)
+
+    user = new User({
+      nombre: nombre,
+      email: email,
+      password: hashedPassword,
+      role: role
+    })
+
+    await user.save()
+
+    res.status(201).json({
+      msg: 'Usuario registrado exitosamente'
+    })
+  } catch (error) {
+    return res.status(500).json({
+      msg: `Error al registrar el usuario: ${error.message}`
+    })
+  }
 }
 
 const loginUser = async (req, res) => {
-    try {
-        const { email, password } = req.body
-        const user = await User.findOne({ email })
+  try {
+    const { email, password } = req.body
+    const user = await User.findOne({ email })
 
-        if (!user) {
-            return res.status(404).json({ 
-                msg: 'El usuario no existe en la base de datos' 
-            })
-        }
-
-        const passwordMatch = await bcrypt.compare(password, user.password)
-
-        if (!passwordMatch) {
-            return res.status(401).json({ 
-                msg: 'Contraseña incorrecta' 
-            })
-        }
-
-        const token = jwt.sign(
-            {id: user._id},
-            process.env.JWT_SECRET_KEY,
-            {expiresIn: '1h'}
-        )
-
-        const roleUser = user.role
-
-        return res.status(200).json({
-            token, roleUser
-        })
-    } catch (error) {
-        return res.status(500).json({ 
-            msg: `Error al iniciar sesión: ${error.message}`
-        });
+    if (!user) {
+      return res.status(404).json({
+        msg: 'El usuario no existe en la base de datos'
+      })
     }
+
+    const passwordMatch = await bcrypt.compare(password, user.password)
+
+    if (!passwordMatch) {
+      return res.status(401).json({
+        msg: 'Contraseña incorrecta'
+      })
+    }
+
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET_KEY, { expiresIn: '1h' })
+
+    const roleUser = user.role
+
+    return res.status(200).json({
+      token,
+      roleUser
+    })
+  } catch (error) {
+    return res.status(500).json({
+      msg: `Error al iniciar sesión: ${error.message}`
+    })
+  }
 }
 
 const getUsersByRole = async (req, res) => {
-    try {
-        const { role } = req.params
+  try {
+    const { role } = req.params
 
-        const rolesValidos = User.schema.path('role').enumValues
+    const rolesValidos = User.schema.path('role').enumValues
 
-        if (!rolesValidos.includes(role)) {
-            return res.status(400).json({
-                msg: 'El rol ingresado es inválido'
-            })
-        }
-
-        const users = await User.find({ role })
-        return res.status(200).json(users)
-    } catch (error){
-        return res.status(500).json({
-            msg: `Error al obtener usuarios: ${error.message}`
-        })
+    if (!rolesValidos.includes(role)) {
+      return res.status(400).json({
+        msg: 'El rol ingresado es inválido'
+      })
     }
+
+    const users = await User.find({ role })
+    return res.status(200).json(users)
+  } catch (error) {
+    return res.status(500).json({
+      msg: `Error al obtener usuarios: ${error.message}`
+    })
+  }
 }
 
 module.exports = { registerUser, loginUser, getUsersByRole }
