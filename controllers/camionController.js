@@ -3,7 +3,7 @@ const Remesa = require('../models/remesaSchema')
 
 const obtenerCamiones = async (req, res) => {
     try {
-        const camiones = await Camion.find().populate('conductorAsignado', 'nombre').populate('remesasAsignadas')
+        const camiones = await Camion.find().populate('conductorAsignado', 'nombre').populate('remesasAsignadas').populate('remesasCargadas')
 
         return res.status(200).json( camiones )
     } catch (error){
@@ -15,7 +15,7 @@ const obtenerCamiones = async (req, res) => {
 
 const crearCamion = async (req, res) => {
     try {
-        const { placa, capacidadCarga, conductorAsignado, disponible, ubicacionActual, ciudadOperacion } = req.body
+        const { placa, capacidadCarga, conductorAsignado, disponible, ubicacionActual, ciudadOperacion, remesasAsignadas, remesasCargadas } = req.body
 
         let camion = await Camion.findOne({ placa })
 
@@ -31,7 +31,9 @@ const crearCamion = async (req, res) => {
             conductorAsignado: conductorAsignado || null,
             disponible: disponible ?? true,
             ubicacionActual: ubicacionActual ?? 'bodega',
-            ciudadOperacion: ciudadOperacion
+            ciudadOperacion: ciudadOperacion,
+            remesasAsignadas: remesasAsignadas,
+            remesasCargadas: remesasCargadas
         })
 
         await camion.save()
@@ -157,4 +159,37 @@ const asignarRemesas = async (req, res) => {
     }
 }
 
-module.exports = { crearCamion, actualizarCamion, obtenerCamiones, eliminarCamion, asignarRemesas }
+const cargarRemesa = async (req, res) =>{
+    try{
+
+        const { id, remesaId } = req.params
+
+        const camion = await Camion.findOneAndUpdate(
+            {_id: id, remesasAsignadas: remesaId},
+            {
+                $pull: { remesasAsignadas: remesaId },
+                $addToSet: { remesasCargadas: remesaId }
+            },
+            { new: true }
+        )
+
+        if(!camion) {
+            return res.status(400).json({
+                msg: 'La remesa no está asignada a este camión'
+            })
+        }
+
+        await Remesa.findByIdAndUpdate(remesaId, { estado: 'cargada' })
+
+        return res.status(200).json({
+            msg: 'La remesa fue cargada exitosamente'
+        })
+
+    } catch (error) {
+        return res.status(500).json({
+            msg: `Error cargando remesa: ${error.message}`
+        })
+    }
+}
+
+module.exports = { crearCamion, actualizarCamion, obtenerCamiones, eliminarCamion, asignarRemesas, cargarRemesa }

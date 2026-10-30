@@ -20,6 +20,10 @@ const camionSchema = new mongoose.Schema({
         enum: ['bodega', 'enRuta'],
         default: 'bodega'
     },
+    remesasCargadas:{
+        type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Remesa' }],
+        default: []
+    },
     remesasAsignadas: {
         type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Remesa' }],
         default: []

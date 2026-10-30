@@ -73,6 +73,14 @@ const actualizarRemesa = async (req, res) => {
 
         const { estado } = req.body
 
+        const estadosValidos = Remesa.schema.path('estado').enumValues
+
+        if(!estadosValidos.includes(estado)) {
+            return res.status(400).json({
+                msg: 'El estado ingresado es inválido'
+            })
+        }
+
         const remesa = await Remesa.findByIdAndUpdate(
             req.params.id,
             { estado },
@@ -88,7 +96,6 @@ const actualizarRemesa = async (req, res) => {
             msg: `Error al actualizar la remesa: ${error.message}`
         })
     }
-
 }
 
 const eliminarRemesa = async (req, res) => {
@@ -104,6 +111,5 @@ const eliminarRemesa = async (req, res) => {
         })
     }
 }
-
 
 module.exports = { crearRemesa, obtenerRemesas, obtenerRemesasPorEstado, actualizarRemesa, eliminarRemesa }
