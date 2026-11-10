@@ -30,6 +30,12 @@ const crearCamion = async (req, res) => {
     } = req.body
 
     let camion = await Camion.findOne({ placa })
+    if(conductorAsignado) {
+      const ocupado = await Camion.findOne({ conductorAsignado })
+      if (ocupado) return res.status(400).json({
+        msg: 'El conductor ya está asignado a otro camión'
+      })
+    }
 
     if (camion) {
       return res.status(400).json({
@@ -64,7 +70,15 @@ const actualizarCamion = async (req, res) => {
   try {
     const { disponible } = req.body
 
-    const camion = await Camion.findByIdAndUpdate(req.params.id, { disponible }, { new: true })
+    const camion = await Camion.findById(req.params.id)
+
+    if (camion.remesasAsignadas.length > 0 || camion.remesasCargadas.length > 0) {
+      return res.status(400).json({
+        msg: 'No puedes desactivar un camión que tiene remesas asignadas o cargadas'
+      })
+    }
+
+    await Camion.findByIdAndUpdate(req.params.id, { disponible }, { new: true })
 
     return res.status(200).json({
       msg: 'Disponibilidad del camión actualizada exitosamente',
@@ -85,6 +99,12 @@ const eliminarCamion = async (req, res) => {
       return res.status(500).json({
         msg: 'El camión no existe'
       })
+
+    if (camion.remesasCargadas.length > 0) {
+      return res.status(400).json({
+        msg: 'No puedes eliminar un camión ya cargado'
+      })
+    }
 
     if (camion.ubicacionActual === 'enRuta') {
       return res.status(400).json({
@@ -113,6 +133,12 @@ const asignarRemesas = async (req, res) => {
     if (!camion) {
       return res.status(400).json({
         msg: 'El camion no existe en la base de datos'
+      })
+    }
+
+    if(camion.disponible === false) {
+      return res.status(400).json({
+        msg: 'El camión no está disponible para asignar remesas'
       })
     }
 

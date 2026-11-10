@@ -2,7 +2,7 @@ const Remesa = require('../models/remesaSchema')
 
 const crearRemesa = async (req, res) => {
   try {
-    const { codigo, cantidad, pesoTotal, direccionEntrega, ciudadEntrega, tipoMercancia, estado } =
+    const { codigo, cantidad, pesoTotal, direccionDestino, ciudadDestino, tipoMercancia, estado, remitente, destinatario, ciudadOrigen, barrioDestino } =
       req.body
 
     let remesa = await Remesa.findOne({ codigo })
@@ -17,10 +17,14 @@ const crearRemesa = async (req, res) => {
       codigo: codigo,
       cantidad: cantidad,
       pesoTotal: pesoTotal,
-      direccionEntrega: direccionEntrega,
-      ciudadEntrega: ciudadEntrega,
+      direccionDestino: direccionDestino,
+      ciudadDestino: ciudadDestino,
       tipoMercancia: tipoMercancia,
-      estado: estado
+      estado: estado,
+      remitente: remitente,
+      destinatario: destinatario,
+      ciudadOrigen: ciudadOrigen,
+      barrioDestino: barrioDestino
     })
 
     await remesa.save()

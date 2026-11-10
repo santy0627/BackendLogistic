@@ -15,11 +15,11 @@ const remesaSchema = new mongoose.Schema({
     type: Number,
     required: true
   },
-  direccionEntrega: {
+  direccionDestino: {
     type: String,
     required: true
   },
-  ciudadEntrega: {
+  ciudadDestino: {
     type: String,
     enum: ciudades,
     required: true
@@ -33,6 +33,23 @@ const remesaSchema = new mongoose.Schema({
     type: String,
     enum: ['enBodega', 'cargada', 'enTransito', 'entregado', 'asignada'],
     default: 'enBodega'
+  },
+  remitente: {
+    type: String,
+    required: true
+  },
+  destinatario: {
+    type: String,
+    required: true
+  },
+  ciudadOrigen: {
+    type: String,
+    enum: ciudades,
+    required: true
+  },
+  barrioDestino: {
+    type: String,
+    required: true
   }
 })
 

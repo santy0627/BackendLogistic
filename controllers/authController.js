@@ -1,6 +1,7 @@
 const User = require('../models/userSchema')
 const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken')
+const Camion = require('../models/camionSchema')
 
 const registerUser = async (req, res) => {
   try {
@@ -90,4 +91,16 @@ const getUsersByRole = async (req, res) => {
   }
 }
 
-module.exports = { registerUser, loginUser, getUsersByRole }
+const getMe = async (req, res) => {
+  try {
+    const user = req.user
+    const camion = await Camion.findOne({ conductorAsignado: req.user._id }).populate('remesasAsignadas').populate('remesasCargadas')
+    return res.status(200).json({ user, camion })
+  } catch (error) {
+    return res.status(500).json({
+      msg: `Error al obtener el usuario: ${error.message}`
+    })
+  } 
+}
+
+module.exports = { registerUser, loginUser, getUsersByRole, getMe }
