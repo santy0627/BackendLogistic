@@ -1,4 +1,5 @@
 const Remesa = require('../models/remesaSchema')
+const Camion = require('../models/camionSchema')
 
 const crearRemesa = async (req, res) => {
   try {
@@ -85,6 +86,17 @@ const actualizarRemesa = async (req, res) => {
     }
 
     const remesa = await Remesa.findByIdAndUpdate(req.params.id, { estado }, { new: true })
+
+    if (estado === 'entregada') {
+      await Camion.updateMany(
+        { remesasCargadas: remesa._id },
+        {
+          $pull: {
+            remesasCargadas: remesa._id
+          }
+        }
+      );
+    }
 
     return res.status(200).json({
       msg: 'Remesa actualizada exitosamente',

@@ -6,7 +6,8 @@ const {
   obtenerCamiones,
   eliminarCamion,
   asignarRemesas,
-  cargarRemesa
+  cargarRemesa,
+  salirRuta
 } = require('../controllers/camionController')
 const { camionValidator } = require('../validators/camionValidator')
 const authMiddleware = require('../middlewares/authMiddleware')
@@ -32,5 +33,6 @@ router.put(
   asignarRemesas
 )
 router.put('/camion/:id/remesas/:remesaId/cargar', authMiddleware, validateMiddleware, cargarRemesa)
+router.put('/camion/:id/ubicacion', authMiddleware, validateMiddleware, salirRuta)
 
 module.exports = router
