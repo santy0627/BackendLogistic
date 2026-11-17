@@ -5,7 +5,7 @@ const Camion = require('../models/camionSchema')
 
 const registerUser = async (req, res) => {
   try {
-    const { nombre, email, password, role } = req.body
+    const { nombre, cedula, email, password, role } = req.body
 
     let user = await User.findOne({ email })
 
@@ -19,6 +19,7 @@ const registerUser = async (req, res) => {
 
     user = new User({
       nombre: nombre,
+      cedula: cedula,
       email: email,
       password: hashedPassword,
       role: role
@@ -94,7 +95,7 @@ const getUsersByRole = async (req, res) => {
 const getMe = async (req, res) => {
   try {
     const user = req.user
-    const camion = await Camion.findOne({ conductorAsignado: req.user._id }).populate('remesasAsignadas').populate('remesasCargadas')
+    const camion = await Camion.findOne({ conductor: req.user._id }).populate('ruta')
     return res.status(200).json({ user, camion })
   } catch (error) {
     return res.status(500).json({

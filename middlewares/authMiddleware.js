@@ -13,11 +13,11 @@ module.exports = async (req, res, next) => {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY)
-    const user = await User.findById(decoded.id)
+    const user = await User.findById(decoded.id).select('-password')
     req.user = user
     next()
   } catch (error) {
-    return res.status(500).json({
+    return res.status(401).json({
       msg: `Token invalido: ${error.message}`
     })
   }

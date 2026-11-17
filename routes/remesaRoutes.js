@@ -4,10 +4,19 @@ const {
   crearRemesa,
   obtenerRemesas,
   obtenerRemesasPorEstado,
-  actualizarRemesa,
-  eliminarRemesa
+  actualizarEstado,
+  eliminarRemesa,
+  cargarRemesa,
+  entregarRemesa,
+  registrarNoEntrega,
+  descargarRemesa
 } = require('../controllers/remesaController')
-const { remesaValidator, remesaActualizarValidator } = require('../validators/remesaValidator')
+const {
+  remesaValidator,
+  remesaActualizarValidator,
+  noEntregaValidator
+} = require('../validators/remesaValidator')
+const { idParam } = require('../validators/idValidator')
 const validateMiddleware = require('../middlewares/validateMiddleware')
 const authMiddleware = require('../middlewares/authMiddleware')
 const authRole = require('../middlewares/roleAuthMiddleware')
@@ -22,13 +31,59 @@ router.post(
 )
 router.get('/remesas', authMiddleware, obtenerRemesas)
 router.get('/remesas/:estado', authMiddleware, obtenerRemesasPorEstado)
+router.delete(
+  '/remesas/:id',
+  authMiddleware,
+  authRole('admin'),
+  idParam('id'),
+  validateMiddleware,
+  eliminarRemesa
+)
+
+router.put(
+  '/remesas/:remesaId/camion/:camionId/cargar',
+  authMiddleware,
+  authRole('auxiliar', 'admin'),
+  idParam('remesaId', 'camionId'),
+  validateMiddleware,
+  cargarRemesa
+)
+
+router.put(
+  '/remesas/:remesaId/entregar',
+  authMiddleware,
+  authRole('conductor'),
+  idParam('remesaId'),
+  validateMiddleware,
+  entregarRemesa
+)
+
+router.put(
+  '/remesas/:remesaId/no-entrega',
+  authMiddleware,
+  authRole('conductor'),
+  idParam('remesaId'),
+  noEntregaValidator,
+  validateMiddleware,
+  registrarNoEntrega
+)
+
+router.put(
+  '/remesas/:remesaId/descargar',
+  authMiddleware,
+  authRole('auxiliar', 'admin'),
+  idParam('remesaId'),
+  validateMiddleware,
+  descargarRemesa
+)
+
 router.put(
   '/remesas/:id',
   authMiddleware,
+  idParam('id'),
   remesaActualizarValidator,
   validateMiddleware,
-  actualizarRemesa
+  actualizarEstado
 )
-router.delete('/remesas/:id', authMiddleware, authRole('admin'), validateMiddleware, eliminarRemesa)
 
 module.exports = router

@@ -1,24 +1,19 @@
-const authRole = (role) => {
-  try {
-    return async (req, res, next) => {
-      if (!req.user) {
-        return res.status(401).json({
-          msg: 'No hay usuario autenticado'
-        })
-      }
-
-      if (req.user.role !== role) {
-        return res.status(403).json({
-          msg: `El usuario no tiene el rol requerido: ${req.user.role}`
-        })
-      }
-
-      next()
+// Acepta uno o varios roles: authRole('admin') o authRole('auxiliar', 'admin')
+const authRole = (...roles) => {
+  return async (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({
+        msg: 'No hay usuario autenticado'
+      })
     }
-  } catch (error) {
-    return res.status(500).json({
-      msg: `Error en la autorización: ${error.message}`
-    })
+
+    if (!roles.includes(req.user.role)) {
+      return res.status(403).json({
+        msg: `Se requiere uno de estos roles: ${roles.join(', ')}`
+      })
+    }
+
+    next()
   }
 }
 

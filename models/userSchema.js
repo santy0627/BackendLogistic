@@ -5,6 +5,10 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  cedula:{
+    type: Number,
+    required: true
+  },
   email: {
     type: String,
     required: true,

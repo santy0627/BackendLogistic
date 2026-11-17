@@ -1,13 +1,13 @@
-const Camion = require('../models/camionSchema')
-const Remesa = require('../models/remesaSchema')
-const { ordenarRemesas } = require('../utils/rutas')
+const Camion = require('../models/camionSchema');
+const Remesa = require('../models/remesaSchema');
+const { ordenarRemesas } = require('../utils/rutas');
+const Viaje = require('../models/viajeSchema')
 
 const obtenerCamiones = async (req, res) => {
   try {
     const camiones = await Camion.find()
-      .populate('conductorAsignado', 'nombre')
-      .populate('remesasAsignadas')
-      .populate('remesasCargadas')
+      .populate('conductor', 'nombre')
+      .populate('ruta')
 
     return res.status(200).json(camiones)
   } catch (error) {
@@ -22,17 +22,16 @@ const crearCamion = async (req, res) => {
     const {
       placa,
       capacidadCarga,
-      conductorAsignado,
-      disponible,
+      conductor,
+      operativo,
       ubicacionActual,
       ciudadOperacion,
-      remesasAsignadas,
-      remesasCargadas
+      ruta
     } = req.body
 
     let camion = await Camion.findOne({ placa })
-    if(conductorAsignado) {
-      const ocupado = await Camion.findOne({ conductorAsignado })
+    if(conductor) {
+      const ocupado = await Camion.findOne({ conductor })
       if (ocupado) return res.status(400).json({
         msg: 'El conductor ya está asignado a otro camión'
       })
@@ -47,12 +46,11 @@ const crearCamion = async (req, res) => {
     camion = new Camion({
       placa: placa,
       capacidadCarga: capacidadCarga,
-      conductorAsignado: conductorAsignado || null,
-      disponible: disponible ?? true,
-      ubicacionActual: ubicacionActual ?? 'bodega',
+      conductor: conductor,
+      operativo: operativo ?? true,
+      ubicacionActual: ubicacionActual ?? 'enBodega',
       ciudadOperacion: ciudadOperacion,
-      remesasAsignadas: remesasAsignadas,
-      remesasCargadas: remesasCargadas
+      ruta: ruta
     })
 
     await camion.save()
@@ -67,23 +65,29 @@ const crearCamion = async (req, res) => {
   }
 }
 
-const actualizarCamion = async (req, res) => {
+const desactivarCamion = async (req, res) => {
   try {
-    const { disponible } = req.body
+
+    const { operativo } = req.body
 
     const camion = await Camion.findById(req.params.id)
 
-    if (camion.remesasAsignadas.length > 0 || camion.remesasCargadas.length > 0) {
+    if(!camion) {
       return res.status(400).json({
-        msg: 'No puedes desactivar un camión que tiene remesas asignadas o cargadas'
+        msg: 'El camión no existe en base de datos'
       })
     }
 
-    await Camion.findByIdAndUpdate(req.params.id, { disponible }, { new: true })
+    if (camion.ruta.length > 0 ) {
+      return res.status(400).json({
+        msg: 'No puedes desactivar un camión con remesas'
+      })
+    }
+
+    await Camion.findByIdAndUpdate(req.params.id, { operativo }, { new: true })
 
     return res.status(200).json({
-      msg: 'Disponibilidad del camión actualizada exitosamente',
-      camion
+      msg: 'Disponibilidad del camión actualizada exitosamente'
     })
   } catch (error) {
     return res.status(500).json({
@@ -103,46 +107,70 @@ const salirRuta = async (req, res) => {
       })
     }
 
-    if(camion.ubicacionActual === 'bodega') {
-      if(camion.remesasAsignadas.length > 0) {
-        return res.status(400).json({
-          msg: 'No puedes salir a ruta sin cargar todas las remesas asignadas'
-        })
-      }
-
-      await Remesa.updateMany(
-        { _id: { $in: camion.remesasCargadas } },
-        { $set: { estado: 'enTransito' } }
-      );
-
-      camion.ubicacionActual = 'enRuta';
-      
-    } else if (camion.ubicacionActual === 'enRuta') {
-      await Remesa.updateMany(
-        {
-          _id: { $in: camion.remesasCargadas },
-          estado: 'enTransito'
-        },
-        {
-          $set: { estado: 'cargada' }
-        }
-      );
-      camion.ubicacionActual = 'bodega';
-      
-    } else {
-      return res.status(400).json({
-        msg: 'Ubicación no válida'
-      });
+    if(!camion.conductor?.equals(req.user._id)){
+      return res.status(403).json({
+        msg: 'Solo el conductor del camión puede realizar esta acción'
+      })
     }
-    await camion.save();
+    
+    if(camion.ubicacionActual !== 'enBodega'){
+      return res.status(400).json({
+        msg: 'El camión no está en la bodega'
+      })
+    }
+
+    if(camion.ruta.length === 0 ) {
+      return res.status(400).json({
+        msg: 'El camion no tiene remesas asignadas'
+      })
+    }
+    if(!camion.conductor) {
+      return res.status(400).json({
+        msg: 'El camión no tiene conductor asignado'
+      })
+    }
+
+    const remesasPendientes = await Remesa.find({
+      _id: { $in: camion.ruta },
+      estado: { $ne: 'cargada' }
+    }).select('codigo estado')
+
+    if(remesasPendientes.length > 0){
+      return res.status(400).json({
+        msg: 'No puedes salir: hay remesas que aún no están cargadas',
+        remesasPendientes
+      })
+    }
+
+    const paradas = camion.ruta.map((remesaId, i) => ({
+      remesa: remesaId,
+      orden: i + 1
+    }))
+
+    const viaje = await Viaje.create({
+      camion: camion._id,
+      placa: camion.placa,
+      conductor: camion.conductor,
+      paradas,
+      fechaEntrega: new Date()
+    })
+
+    await Remesa.updateMany(
+      { _id: { $in: camion.ruta} },
+      { $set: { estado: 'enTransito'} }
+    )
+    
+    camion.ubicacionActual = 'enRuta'
+
+    await camion.save()
 
     return res.status(200).json({
       msg: 'Ubicación del camión actualizada exitosamente',
-      camion
+      viaje
     })
   } catch (error) {
     return res.status(500).json({
-      msg: `Error al actualizar el camión: ${error.message}`
+      msg: `Error al salir a ruta: ${error.message}`
     })
   }
 }
@@ -151,14 +179,16 @@ const eliminarCamion = async (req, res) => {
   try {
     const camion = await Camion.findById(req.params.id)
 
-    if (!camion)
-      return res.status(500).json({
+    if (!camion){
+      return res.status(404).json({
         msg: 'El camión no existe'
       })
+    }
 
-    if (camion.remesasCargadas.length > 0) {
+
+    if (camion.ruta.length > 0) {
       return res.status(400).json({
-        msg: 'No puedes eliminar un camión ya cargado'
+        msg: 'No puedes eliminar con remesas asignadas o cargadas'
       })
     }
 
@@ -168,13 +198,11 @@ const eliminarCamion = async (req, res) => {
       })
     }
 
-    await Remesa.updateMany({ _id: { $in: camion.remesasAsignadas } }, { estado: 'enBodega' })
-
     await Camion.findByIdAndDelete(camion._id)
 
-    return res.status(200).json({ msg: 'Camion eliminado y remesas actualizadas' })
+    return res.status(200).json({ msg: 'Camion eliminado' })
   } catch (error) {
-    return res.status(500).json({
+    return res.status(404).json({
       msg: ` Error eliminando camion: ${error.message}`
     })
   }
@@ -186,48 +214,60 @@ const asignarRemesas = async (req, res) => {
 
     const camion = await Camion.findById(id)
 
+    //verificaciones
     if (!camion) {
-      return res.status(400).json({
+      return res.status(404).json({
         msg: 'El camion no existe en la base de datos'
       })
     }
 
-    if(camion.disponible === false) {
+    if(camion.operativo === false) {
       return res.status(400).json({
         msg: 'El camión no está disponible para asignar remesas'
       })
     }
 
-    const remesasDisponibles = await Remesa.find({
-      ciudadDestino: camion.ciudadOperacion,
-      estado: 'enBodega'
-    })
-
-    if (remesasDisponibles.length === 0) {
+    if(camion.ruta.length > 0) {
       return res.status(400).json({
-        msg: 'No hay remesas disponibles en esta ciudad'
+        msg: 'El camión ya tiene remesas asignadas'
       })
     }
 
-    const remesasOrdenadas = ordenarRemesas(camion.ciudadOperacion, remesasDisponibles)
+    if(camion.ubicacionActual === 'enRuta'){
+      return res.status(400).json({
+        msg: 'El camión ya está en ruta'
+      })
+    }
 
-    const remesasACargar = []
+    const remesasDisponibles = await Remesa.find({ // remesas dentro del area de operacion
+      ciudadDestino: camion.ciudadOperacion,
+      estado: 'enBodega'
+    }).sort({ createdAt: 1, _id: 1 })
+
+    const remesasSeleccionadas = []
     let pesoAcumulado = 0
 
-    for (const remesa of remesasOrdenadas) {
+    for (const remesa of remesasDisponibles) {
       if (pesoAcumulado + remesa.pesoTotal <= camion.capacidadCarga) {
         pesoAcumulado += remesa.pesoTotal
-        remesasACargar.push(remesa._id)
+        remesasSeleccionadas.push(remesa)
       }
     }
 
-    if (remesasACargar.length === 0) {
+    if (remesasSeleccionadas.length === 0) {
       return res.status(400).json({
         msg: 'Ninguna remesa cabe en la capacidad del camión'
       })
     }
 
-    camion.remesasAsignadas = remesasACargar
+    const remesasOrdenadas = ordenarRemesas( // ordenar remesas
+      camion.ciudadOperacion,
+      remesasSeleccionadas
+    )
+
+    const remesasACargar = remesasOrdenadas.map(remesa => remesa._id)
+
+    camion.ruta = remesasACargar
 
     await camion.save()
 
@@ -243,43 +283,92 @@ const asignarRemesas = async (req, res) => {
   }
 }
 
-const cargarRemesa = async (req, res) => {
+const volverRuta = async (req, res) => {
   try {
-    const { id, remesaId } = req.params
+    const { id } = req.params
 
-    const camion = await Camion.findOneAndUpdate(
-      { _id: id, remesasAsignadas: remesaId },
-      {
-        $pull: { remesasAsignadas: remesaId },
-        $addToSet: { remesasCargadas: remesaId }
-      },
-      { new: true }
-    )
+    const camion = await Camion.findById(id)
 
-    if (!camion) {
-      return res.status(400).json({
-        msg: 'La remesa no está asignada a este camión'
+    if(!camion) {
+      return res.status(404).json({
+        msg: 'El camión no existe en base de datos'
       })
     }
 
-    await Remesa.findByIdAndUpdate(remesaId, { estado: 'cargada' })
+    if(!camion.conductor?.equals(req.user._id)){
+      return res.status(403).json({
+        msg: 'Solo el conductor del camión puede realizar esta acción'
+      })
+    }
+
+    if(camion.ubicacionActual !== 'enRuta'){
+      return res.status(400).json({
+        msg: 'El camión ya está en bodega'
+      })
+    }
+
+    const viaje = await Viaje.findOne({
+      camion: camion._id,
+      estado: 'enCurso'
+    })
+
+    if(!viaje){
+      return res.status(409).json({
+        msg: 'El camión no tiene una ruta creada'
+      })
+    }
+
+    const remesas = await Remesa.find({ _id: { $in: camion.ruta } })
+
+    const remesasPendientes = remesas.filter(
+      (remesa) => !['entregado', 'noEntregada'].includes(remesa.estado)
+    )
+
+    if(remesasPendientes.length > 0){
+      return res.status(400).json({
+        msg: 'Aún tienes remesas sin reportar',
+        remesasPendientes: remesasPendientes.map((r) => ({ codigo: r.codigo, estado: r.estado }))
+      })
+    }
+
+    const porId = new Map(remesas.map((r) => [r._id.toString(), r]))
+
+    for (const parada of viaje.paradas) {
+      const remesa = porId.get(parada.remesa.toString())
+      parada.resultado = remesa.estado
+      parada.motivoNoEntrega = remesa.motivoNoEntrega
+    }
+
+    viaje.estado = 'finalizado'
+    viaje.horaRegreso = new Date()
+    await viaje.save()
+
+    const idsEntregadas = remesas
+      .filter((remesa) => remesa.estado === 'entregado')
+      .map((remesa) => remesa._id)
+
+    await Camion.updateOne(
+      { _id: camion._id },
+      { $pull: { ruta: { $in: idsEntregadas } }, $set: { ubicacionActual: 'enBodega' } }
+    )
 
     return res.status(200).json({
-      msg: 'La remesa fue cargada exitosamente'
+      msg: 'Camión de vuelta a bodega y viaje actualizado'
     })
+
   } catch (error) {
     return res.status(500).json({
-      msg: `Error cargando remesa: ${error.message}`
+      msg: `Error voliendo de ruta: ${error.message}`
     })
   }
 }
 
 module.exports = {
   crearCamion,
-  actualizarCamion,
+  desactivarCamion,
   obtenerCamiones,
   eliminarCamion,
   asignarRemesas,
-  cargarRemesa,
-  salirRuta
+  salirRuta,
+  volverRuta
 }
