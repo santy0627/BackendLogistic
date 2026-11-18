@@ -4,6 +4,7 @@ const dotenv = require('dotenv')
 const auth = require('./routes/authRoutes')
 const remesa = require('./routes/remesaRoutes')
 const camion = require('./routes/camionRoutes')
+const viaje = require('./routes/viajeRoutes')
 const cors = require('cors')
 
 dotenv.config()
@@ -17,6 +18,7 @@ app.use(express.json())
 app.use('/api/auth', auth)
 app.use('/api', remesa)
 app.use('/api', camion)
+app.use('/api', viaje)
 
 const PORT = process.env.PORT
 

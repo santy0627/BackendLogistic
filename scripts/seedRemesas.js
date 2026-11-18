@@ -8,11 +8,19 @@
 //   node scripts/seedRemesas.js --desde=26200001    -> otro lote (otros códigos y otros datos)
 //
 // Es seguro ejecutarlo varias veces: si una remesa con el mismo código ya existe,
-// no la duplica ni la modifica. Tampoco borra nada.
+// no la duplica ni la modifica (tampoco toca su updatedAt). Tampoco borra nada.
 //
-// Todas las remesas usan un barrio que existe en constants/ciudades.js, así se pueden
-// ordenar por ruta. Todas se crean "enBodega": los demás estados (asignada, cargada,
-// enTransito...) los asigna la aplicación cuando la remesa entra a un camión.
+// Campos que carga cada remesa (los mismos de models/remesaSchema.js):
+//   codigo, cantidad, pesoTotal, direccionDestino, ciudadDestino, barrioDestino,
+//   tipoMercancia, estado, motivoNoEntrega, remitente, destinatario, ciudadOrigen,
+//   createdAt, updatedAt
+//
+// - Todas se crean "enBodega" y sin motivoNoEntrega: los demás estados (asignada, cargada,
+//   enTransito, entregado, noEntregada) los asigna la aplicación a lo largo del flujo.
+// - Todas usan un barrio que existe en constants/ciudades.js, así se pueden ordenar por ruta.
+// - createdAt va escalonado en el tiempo (una remesa nueva cada 5 a 45 minutos, de la más
+//   antigua a la más reciente, en orden de código). Así, al asignar remesas a un camión
+//   (que toma primero las más antiguas) se nota que respeta el orden de llegada.
 
 const path = require('path')
 const { datosCiudades, ciudades } = require('../constants/ciudades')
@@ -22,6 +30,8 @@ const Remesa = require('../models/remesaSchema')
 const CANTIDAD_POR_DEFECTO = 40
 const CODIGO_INICIAL_POR_DEFECTO = 26100001 // 8 dígitos, para cumplir el validador del backend
 const SEMILLA = 2026 // misma semilla y mismo lote = mismas remesas (por eso no duplica)
+const ESTADO_INICIAL = 'enBodega' // toda remesa nueva empieza en la bodega
+const MINUTOS_ENTRE_REMESAS = [5, 45] // separación de createdAt entre una remesa y la siguiente
 
 // Con qué frecuencia aparece cada ciudad como destino (las que no están pesan 1)
 const PESO_CIUDAD = {
@@ -125,8 +135,14 @@ const crearGenerador = (semilla) => {
 // ---------- Construcción de las remesas ----------
 const generarRemesas = (cantidad, codigoInicial, ciudadFija) => {
   const { entero, elegir, elegirConPeso } = crearGenerador(SEMILLA + codigoInicial)
+  // Generador aparte para las fechas: así no cambia el resto de los datos de cada remesa
+  const fechas = crearGenerador(SEMILLA + codigoInicial + 1)
   const opcionesCiudad = ciudades.map((nombre) => ({ nombre, peso: PESO_CIUDAD[nombre] ?? 1 }))
   const remesas = []
+
+  // La primera remesa es la más antigua; la última, la más reciente (y todas ya pasadas)
+  const [minMinutos, maxMinutos] = MINUTOS_ENTRE_REMESAS
+  let momento = Date.now() - cantidad * maxMinutos * 60 * 1000
 
   for (let i = 0; i < cantidad; i++) {
     const ciudadDestino = ciudadFija ?? elegirConPeso(opcionesCiudad).nombre
@@ -142,6 +158,9 @@ const generarRemesas = (cantidad, codigoInicial, ciudadFija) => {
     const puerta = `${entero(1, 95)}${elegir(SUFIJOS)}-${String(entero(1, 99)).padStart(2, '0')}`
     const direccionDestino = [`${via} # ${puerta}`, elegir(COMPLEMENTOS)].filter(Boolean).join(', ')
 
+    momento += fechas.entero(minMinutos, maxMinutos) * 60 * 1000
+    const creada = new Date(momento)
+
     remesas.push({
       codigo: codigoInicial + i,
       cantidad: unidades,
@@ -150,10 +169,13 @@ const generarRemesas = (cantidad, codigoInicial, ciudadFija) => {
       ciudadDestino,
       barrioDestino,
       tipoMercancia: mercancia.tipo,
-      estado: 'enBodega',
+      estado: ESTADO_INICIAL,
+      motivoNoEntrega: null,
       remitente: elegir(REMITENTES),
       destinatario: elegir(DESTINATARIOS),
-      ciudadOrigen
+      ciudadOrigen,
+      createdAt: creada,
+      updatedAt: creada
     })
   }
 
@@ -234,7 +256,8 @@ const main = async () => {
         cantidad: remesa.cantidad,
         kg: remesa.pesoTotal,
         tipo: remesa.tipoMercancia,
-        estado: remesa.estado
+        estado: remesa.estado,
+        creada: remesa.createdAt.toISOString().slice(0, 16).replace('T', ' ')
       }))
     )
     return
@@ -256,6 +279,9 @@ const main = async () => {
 
   console.log(`Base de datos: ${mongoose.connection.name}`)
 
+  // timestamps: false -> Mongoose no escribe createdAt/updatedAt por su cuenta. Los pone
+  // este script (escalonados) y solo cuando la remesa se crea: si ya existía, ni su
+  // updatedAt cambia.
   const resultado = await Remesa.bulkWrite(
     remesas.map((remesa) => ({
       updateOne: {
@@ -263,7 +289,8 @@ const main = async () => {
         update: { $setOnInsert: remesa }, // solo escribe si NO existe esa remesa
         upsert: true
       }
-    }))
+    })),
+    { timestamps: false }
   )
 
   const creadas = resultado.upsertedCount

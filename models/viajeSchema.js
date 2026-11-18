@@ -20,10 +20,6 @@ const paradaSchema = new mongoose.Schema( // historial de las remesas dentro del
       type: String,
       trim: true,
       default: null
-    },
-    horaEntrega: {
-      type: Date,
-      default: null
     }
   },
   { _id: false }
